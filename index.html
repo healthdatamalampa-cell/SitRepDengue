@@ -154,6 +154,16 @@ table.at td.sx{white-space:nowrap}
 .chip{font:600 9px/1 var(--f-head);padding:2px 5px;border-radius:8px;display:inline-block;white-space:nowrap}
 .chip.Open{background:#fdecea;color:#b3261e}.chip.In{background:#fff4d6;color:#7a5200}.chip.Done{background:#e3f4e8;color:#1d6b3a}.chip.Esc{background:#ede7f6;color:#4a2a8a}
 .epi{display:block;width:100%;height:auto;margin-top:3px}
+.glance{position:absolute;left:19px;right:19px;border:1px solid #C9D9EF;border-left:5px solid #f2b90d;background:linear-gradient(180deg,#F8FBFE 0%,#EEF4FB 100%);border-radius:2px;padding:4px 12px 6px;z-index:1}
+.glance .gh{display:flex;align-items:center;gap:8px;font:700 13px/18px var(--f-head);color:#0a162e;text-transform:uppercase;letter-spacing:.05em;border-bottom:1.5px solid #9DB9E3;padding-bottom:2px;margin-bottom:3px}
+.glance .gh .eb{margin:0;padding:1px 7px;text-transform:none;letter-spacing:0}
+.glance .gtag{font:600 8.5px/1 var(--f-head);color:#fff;background:#6b7a99;border-radius:6px;padding:2px 5px;letter-spacing:.04em}
+.glance .gt{margin:0;font:13px/1.4 var(--f-body);color:#0a0a0a;text-align:justify;white-space:pre-wrap}
+#pages.previewing .glance .gtag{display:none}
+.epictl{display:flex;align-items:center;gap:5px;font:600 10.5px var(--f-head);color:#1F3864;margin:3px 0 1px;cursor:pointer}
+.epictl input{margin:0;accent-color:#1730AD}
+textarea.hist{width:100%;max-width:560px;font:12.5px/1.4 ui-monospace,Consolas,monospace;padding:7px 9px;border:1px solid var(--chrome-line);border-radius:6px;background:var(--chrome-bg);color:var(--chrome-fg)}
+.panel code{font-size:12px}
 .note{font:italic 10.5px/1.35 var(--f-body);color:#444}
 
 /* ---------- editing affordances (screen only, never exported) ---------- */
@@ -277,6 +287,9 @@ tr.flash td{animation:flashrow 1.6s ease-out}
   <h2>Opening totals</h2>
   <p>Counts that happened before SitRep 01 (for example cases recorded before the EOC was activated). Every cumulative figure starts from these numbers. Leave at 0 if the EOC started counting from SitRep 01.</p>
   <div class="bgrid" id="bgrid"></div>
+  <h2 style="margin-top:14px">Daily history (charts only)</h2>
+  <p>Daily counts before SitRep 01 for the epidemic curve and NS1 Ag graph. One line per date: <b>date, new cases, NS1 Ag positive, deaths, IgM positive, IgG positive, total samples tested</b> (e.g. <code>2026-08-17, 2, 1, 0, 1, 0, 3</code>; the last three are optional). Leave a value blank if not known. SitRep data overrides any line with the same date. These lines do not change cumulative totals; use the opening totals above for that.</p>
+  <textarea id="bHist" class="hist" rows="8" spellcheck="false" placeholder="2026-08-17, 2, 1, 0&#10;2026-08-18, 0, , 0"></textarea>
   <div class="row"><button type="button" class="primary" id="bSave">Save opening totals</button><button type="button" id="bClose">Close</button></div>
 </section>
 <div class="legend"><span><b style="background:#FFFBE8;outline:1px dashed #d8c27a"></b>Click to edit</span><span><b style="background:#1730AD"></b>Cumulative and AUTO values fill in from all earlier SitReps</span><span>Lines starting with “-” print as bullets</span><span>Hover an indicator to see its variable name</span></div>
@@ -380,8 +393,7 @@ const SECTIONS=[
    T("unresolved_strategic_risks","Unresolved strategic risks","Risks requiring monitoring or mitigation",{keep:1})]},
  {h1:"PHEOC Management Support",fields:[
    A("sitrep_number","SitRep number",()=>"SitRep "+pad2(cur.num)),S("sitrep_submission_status","SitRep submission status",L_SUBMIT),
-   C("eoc_meetings_held","EOC meetings held"),A("functional_teams_reporting","Functional teams reporting",teamsReporting),
-   C("situation_updates_received","Situation updates received"),D("next_sitrep_deadline","Next SitRep deadline"),
+   C("eoc_meetings_held","EOC meetings held"),D("next_sitrep_deadline","Next SitRep deadline"),
    T("outstanding_information_requests","Outstanding information requests","Information still needed for the SitRep"),
    T("partner_coordination_issues","Partner coordination issues","Issues needing interagency resolution")]},
  {h1:"Health Administration"},
@@ -419,7 +431,7 @@ const SECTIONS=[
    C("suspected_cases_assessed","Suspected cases assessed"),U("confirmed_cases_under_care","Confirmed cases under care"),
    C("cases_without_warning_signs","Cases without warning signs"),C("cases_with_warning_signs","Cases with warning signs"),
    C("severe_dengue_cases","Severe dengue"),C("outpatient_cases_managed","Outpatients managed"),
-   U("current_dengue_admissions","Current dengue admissions"),U("critical_care_patients","Critical care patients"),
+   U("current_dengue_admissions","Current dengue admissions"),U("dengue_beds_available","Dengue beds available",{keep:1}),U("critical_care_patients","Critical care patients"),
    C("patients_referred","Patients referred"),C("patients_discharged","Patients discharged"),C("dengue_deaths","Dengue-associated deaths")]},
  {h2:"Demand Generation",fields:[
    C("awareness_sessions_held","Awareness sessions held"),C("community_meetings_held","Community meetings held"),
@@ -428,6 +440,10 @@ const SECTIONS=[
    C("health_promotion_materials_distributed","Materials distributed"),U("dengue_prevention_campaigns_active","Campaigns active",{keep:1})]},
  {h2:"Surveillance",special:"agesex",fields:[
    C("new_suspected_cases","Suspected cases"),C("new_probable_cases","Probable cases"),C("new_confirmed_cases","Confirmed cases"),
+   C("total_samples_tested","Total samples tested"),
+   C("ns1_tests_performed","NS1 Ag tests performed"),C("ns1_positive","NS1 Ag positive"),
+   C("igm_positive","IgM Positive Tested"),C("igg_positive","IgG Positive Tested"),
+   A("ns1_positivity","NS1 Ag positivity (cumulative)",()=>pct(cum("ns1_positive"),cum("ns1_tests_performed"))),
    T("cases_by_onset_date","Cases by onset date","2026-10-10: 3; 2026-10-11: 5"),
    T("unusual_clinical_events","Unusual clinical events / alerts","Unusual signals requiring investigation")]},
  {h1:"Geographic & Epidemiological Overview",special:"geo",fields:[
@@ -450,7 +466,8 @@ const SECTIONS=[
    T("response_constraints","Response constraints","Barriers to effective response"),
    T("priority_risks_for_escalation","Priority risks for escalation","Issues requiring EOC decision")]},
  {h1:"Annex",brk:1},
- {h2:"Annex – Epidemic curve",s:10,sub:"Epidemic curve by reporting period",special:"epi"},
+ {h2:"Epidemic curve — new cases by date of report",s:10,special:"epi"},
+ {h2:"Laboratory testing — by date of report",s:10,special:"lab"},
  {h2:"Annex – Outbreak maps & images",s:10,sub:"Outbreak maps & images",special:"images"}
 ];
 
@@ -488,6 +505,7 @@ function blankSitrep(n){
     const pv=prev.v||{};
     ALLF.forEach(f=>{if(f.keep&&has(pv[f.k]))s.v[f.k]=pv[f.k];});
     AREA_COUNCILS.forEach(a=>["ac_hot_","ac_vc_","ac_last_"].forEach(p=>{if(has(pv[p+a[3]]))s.v[p+a[3]]=pv[p+a[3]];}));
+    if(pv.epi_show_deaths)s.v.epi_show_deaths=true;
     s.teams={};for(const id in prev.teams||{})s.teams[id]={status:(prev.teams[id]||{}).status||""};
     if(prev.stock&&prev.stock.length)s.stock=prev.stock.map(r=>({item:r.item,unit:r.unit,soh:r.soh,adc:r.adc,min:r.min,reorder:r.reorder}));
     s.actions=clone((prev.actions||[]).filter(a=>a.status!=="Completed"&&a.status!=="Cancelled"));
@@ -725,25 +743,118 @@ function imagesAtoms(edit,push){
   else if(!imgs.length)push(h("div",{class:"gap"}),{sp:1});
 }
 
-function epiAtoms(push){
-  const rows=allNums().map(n=>{const s=sitrepFor(n);if(!s)return null;const v=s.v||{};return {n,lab:shortDate(s.end_date)||("SR"+pad2(n)),s:num(v.new_suspected_cases),p:num(v.new_probable_cases),c:num(v.new_confirmed_cases),d:num(v.dengue_deaths)};}).filter(Boolean);
-  const W=324,H=190,L=30,R=8,T=16,B=46;
-  const max=Math.max(4,...rows.map(r=>r.s+r.p+r.c));const step=Math.max(1,Math.ceil(max/4));const top=step*4;
-  const cw=(W-L-R)/Math.max(rows.length,1);const bw=Math.min(26,cw*0.62);const y=v=>T+(H-T-B)*(1-v/top);
-  const ff='font-family="Segoe UI,Open Sans,sans-serif"';
-  let s=`<svg class="epi" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Dengue cases by reporting period">`;
-  for(let i=0;i<=4;i++){const v=step*i,yy=y(v);s+=`<line x1="${L}" x2="${W-R}" y1="${yy}" y2="${yy}" stroke="${i?"#E3ECF7":"#7d8fb3"}"/><text x="${L-4}" y="${yy+3}" font-size="8.5" text-anchor="end" fill="#44506a" ${ff}>${v}</text>`;}
-  rows.forEach((r,i)=>{const cx=L+cw*i+cw/2;let base=0;
-    [["c","#1730AD"],["p","#4F7FD9"],["s","#A9C2EE"]].forEach(([k,col])=>{const y0=y(base),y1=y(base+r[k]);if(r[k])s+=`<rect x="${cx-bw/2}" y="${y1}" width="${bw}" height="${y0-y1}" fill="${col}"/>`;base+=r[k];});
-    const tot=r.s+r.p+r.c,yt=y(tot);
-    if(tot)s+=`<text x="${cx}" y="${yt-3}" font-size="8.5" text-anchor="middle" fill="#1F3864" font-weight="700" ${ff}>${tot}</text>`;
-    if(r.d)s+=`<text x="${cx}" y="${yt-12}" font-size="8" text-anchor="middle" fill="#b3261e" ${ff}>†${r.d}</text>`;
-    s+=`<text x="${cx}" y="${H-B+11}" font-size="8" text-anchor="middle" fill="#44506a" ${ff}>${r.lab}</text><text x="${cx}" y="${H-B+20}" font-size="7.5" text-anchor="middle" fill="#7a8399" ${ff}>SR${pad2(r.n)}</text>`;});
-  const lg=[["#1730AD","Confirmed"],["#4F7FD9","Probable"],["#A9C2EE","Suspected"]];let lx=L;
-  lg.forEach(([c,t])=>{s+=`<rect x="${lx}" y="${H-12}" width="8" height="8" fill="${c}"/><text x="${lx+11}" y="${H-5}" font-size="8" fill="#333" ${ff}>${t}</text>`;lx+=62;});
-  s+=`<text x="${lx}" y="${H-5}" font-size="8" fill="#b3261e" ${ff}>† deaths</text></svg>`;
-  const w=h("div");w.innerHTML=s;push(w.firstChild);
-  push(h("div",{class:"note"},calc(()=>"New cases per reporting period by SitRep end date (onset dates in 5.5 where available). Cumulative: "+fmtN(cumCases())+" cases, "+fmtN(cum("dengue_deaths"))+" deaths.")));
+/* ---------- daily series (date of report) for epi curve + NS1 ---------- */
+const DAY=864e5;
+const isoD=t=>new Date(t).toISOString().slice(0,10);
+const MON3=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sept","Oct","Nov","Dec"];
+const dLab=iso=>{const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(iso||"");return m?(+m[3])+" "+MON3[+m[2]-1]:"";};
+function parseHistory(){
+  const out={};
+  String((store.config||{}).history_text||"").split(/\n/).forEach(l=>{
+    const p=l.split(/[,\t;]+/).map(x=>x.trim());
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(p[0]||""))return;
+    const g=x=>(x===undefined||x===""||isNaN(x))?null:Math.max(0,Number(x));
+    out[p[0]]={cases:g(p[1]),ns1:g(p[2]),deaths:g(p[3]),igm:g(p[4]),igg:g(p[5]),tested:g(p[6])};
+  });
+  return out;
+}
+function dailySeries(){
+  const m=parseHistory(),sr={};
+  allNums().forEach(n=>{const s=sitrepFor(n);if(!s||!s.end_date)return;const v=s.v||{};const o=sr[s.end_date]||(sr[s.end_date]={cases:null,ns1:null,deaths:null,igm:null,igg:null,tested:null});
+    const c=newCases(s);if(c!=="")o.cases=(o.cases||0)+c;
+    [["ns1","ns1_positive"],["igm","igm_positive"],["igg","igg_positive"],["tested","total_samples_tested"]].forEach(([k,f])=>{if(has(v[f]))o[k]=(o[k]||0)+num(v[f]);});
+    if(has(v.dengue_deaths))o.deaths=(o.deaths||0)+num(v.dengue_deaths);});
+  for(const d in sr)m[d]=sr[d];
+  const lim=cur&&cur.end_date?cur.end_date:"9999";
+  const ds=Object.keys(m).filter(d=>d<=lim).sort();
+  if(!ds.length)return [];
+  const t0=Date.parse(ds[0]+"T00:00:00Z"),t1=Date.parse(ds[ds.length-1]+"T00:00:00Z");
+  const out=[];
+  for(let t=t0;t<=t1;t+=DAY){const d=isoD(t),r=m[d]||{};const nv=x=>x==null?null:x;out.push({d,cases:num(r.cases),ns1:nv(r.ns1),igm:nv(r.igm),igg:nv(r.igg),tested:nv(r.tested),deaths:num(r.deaths)});}
+  out.forEach((r,i)=>{let a=0,k=0;for(let j=Math.max(0,i-6);j<=i;j++){a+=out[j].cases;k++;}r.ma=a/k;});
+  return out;
+}
+function niceScale(max,n){
+  max=Math.max(max,1);const raw=max/n;const mag=Math.pow(10,Math.floor(Math.log10(raw)));
+  let st=[1,2,2.5,5,10].map(x=>x*mag).find(x=>x>=raw);st=Math.max(1,Math.ceil(st));
+  return {step:st,top:st*Math.ceil(max/st)};
+}
+function smoothPath(pts,yMin,yMax){
+  if(!pts.length)return "";const f=v=>v.toFixed(1),cl=v=>Math.min(yMax,Math.max(yMin,v));
+  let d="M"+f(pts[0][0])+","+f(pts[0][1]);
+  for(let i=0;i<pts.length-1;i++){const p0=pts[i-1]||pts[i],p1=pts[i],p2=pts[i+1],p3=pts[i+2]||p2;
+    d+=" C"+f(p1[0]+(p2[0]-p0[0])/6)+","+f(cl(p1[1]+(p2[1]-p0[1])/6))+" "+f(p2[0]-(p3[0]-p1[0])/6)+","+f(cl(p2[1]-(p3[1]-p1[1])/6))+" "+f(p2[0])+","+f(p2[1]);}
+  return d;
+}
+const FF='font-family="Segoe UI,Open Sans,sans-serif"';
+function xAxisSvg(rows,L,cw,yBase,W,R){
+  const n=rows.length;const k=[1,2,3,5,7,10,14,21,28,35].find(x=>n/x<=6)||Math.ceil(n/6);
+  let s=`<line x1="${L}" x2="${W-R}" y1="${yBase}" y2="${yBase}" stroke="#9aa5ba" stroke-width="0.8"/>`;
+  for(let i=0;i<n;i+=k){const cx=L+cw*i+cw/2;s+=`<line x1="${cx}" x2="${cx}" y1="${yBase}" y2="${yBase+2.5}" stroke="#9aa5ba" stroke-width="0.6"/><text x="${cx}" y="${yBase+11}" font-size="8" text-anchor="middle" fill="#5b6578" ${FF}>${dLab(rows[i].d)}</text>`;}
+  return s;
+}
+function yAxisSvg(sc,y,L,W,R,label,midY){
+  let s="";
+  for(let v=0;v<=sc.top;v+=sc.step){const yy=y(v);s+=`<line x1="${L}" x2="${W-R}" y1="${yy}" y2="${yy}" stroke="#E5E8F0" stroke-width="0.7"/><text x="${L-4}" y="${yy+3}" font-size="8" text-anchor="end" fill="#5b6578" ${FF}>${v}</text>`;}
+  s+=`<line x1="${L}" x2="${L}" y1="${y(sc.top)}" y2="${y(0)}" stroke="#d3d8e3" stroke-width="0.7"/>`;
+  s+=`<text transform="translate(9 ${midY}) rotate(-90)" font-size="8.5" text-anchor="middle" fill="#5b6578" ${FF}>${label}</text>`;
+  return s;
+}
+function svgNode(str){const w=h("div");w.innerHTML=str;return w.firstChild;}
+
+function epiAtoms(edit,push){
+  const rows=dailySeries();
+  const showD=!!cur.v.epi_show_deaths;
+  if(edit)push(h("label",{class:"epictl"},h("input",{type:"checkbox","data-bind":"v.epi_show_deaths","data-chk":"1",checked:showD||null}),"Show deaths (right axis)"));
+  if(!rows.length){push(h("div",{class:"note"},"No case data yet. Enter new cases in Surveillance, or add daily history under More › Opening totals."));return;}
+  const anyD=rows.some(r=>r.deaths>0),dOn=showD&&anyD;
+  const W=324,H=196,L=30,R=dOn?22:8,T=8,B=40;const yBase=H-B;
+  const sc=niceScale(Math.max(4,...rows.map(r=>r.cases),...rows.map(r=>r.ma)),5);
+  const y=v=>T+(yBase-T)*(1-v/sc.top);
+  const cw=(W-L-R)/rows.length;const gapW=Math.min(0.8,cw*0.12);
+  let s=`<svg class="epi" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Epidemic curve: new dengue cases by date of report with 7-day moving average">`;
+  s+=yAxisSvg(sc,y,L,W,R,"Cases",(T+yBase)/2);
+  rows.forEach((r,i)=>{if(r.cases>0){const x=L+cw*i+gapW/2,yt=y(r.cases);s+=`<rect x="${x.toFixed(2)}" y="${yt.toFixed(2)}" width="${(cw-gapW).toFixed(2)}" height="${(yBase-yt).toFixed(2)}" fill="#3A62E3"/>`;}});
+  if(rows.length>1)s+=`<path d="${smoothPath(rows.map((r,i)=>[L+cw*i+cw/2,y(r.ma)]),y(sc.top),yBase)}" fill="none" stroke="#D0342C" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>`;
+  if(dOn){const ds=niceScale(Math.max(2,...rows.map(r=>r.deaths)),4);const yd=v=>T+(yBase-T)*(1-v/ds.top);
+    for(let v=0;v<=ds.top;v+=ds.step)s+=`<text x="${W-R+4}" y="${yd(v)+3}" font-size="7.5" fill="#55607a" ${FF}>${v}</text>`;
+    rows.forEach((r,i)=>{if(r.deaths>0){const cx=L+cw*i+cw/2,yy=yd(r.deaths);s+=`<path d="M${cx},${yy-4} L${cx+4},${yy} L${cx},${yy+4} L${cx-4},${yy} Z" fill="#55607a" stroke="#fff" stroke-width="0.6"/>`;}});}
+  s+=xAxisSvg(rows,L,cw,yBase,W,R);
+  const ly=H-12;
+  s+=`<rect x="44" y="${ly-7}" width="9" height="9" fill="#D0342C"/><text x="57" y="${ly+1}" font-size="8.5" fill="#44506a" ${FF}>7-day moving average</text>`;
+  s+=`<rect x="152" y="${ly-7}" width="9" height="9" fill="#3A62E3"/><text x="165" y="${ly+1}" font-size="8.5" fill="#44506a" ${FF}>New cases (all classifications)</text></svg>`;
+  push(svgNode(s),{keep:1});
+  const first=rows[0].d,last=rows[rows.length-1].d;
+  push(h("div",{class:"note"},"Bars: daily new cases · red line: 7-day moving average"+(dOn?" · ◆ deaths (right axis)":"")+". "+dLab(first)+" – "+dLab(last)+": "+fmtN(rows.reduce((a,r)=>a+r.cases,0))+" cases, "+fmtN(rows.reduce((a,r)=>a+r.deaths,0))+" deaths."));
+}
+
+const LAB_SERIES=[["tested","Total samples tested","#0f1e3d","total_samples_tested",1],["ns1","NS1 Ag positive","#1730AD","ns1_positive",0],["igm","IgM positive","#E07B00","igm_positive",0],["igg","IgG positive","#8E3BAF","igg_positive",0]];
+function labAtoms(edit,push){
+  const rows=dailySeries();
+  const ser=LAB_SERIES.map(([k,l,c,f,dash])=>({k,l,c,f,dash,pts:rows.map((r,i)=>({i,v:r[k]})).filter(p=>p.v!=null)})).filter(x=>x.pts.length);
+  if(!ser.length){if(edit)push(h("div",{class:"note"},"No laboratory results yet. Enter Total samples tested, NS1 Ag, IgM and IgG positives under Surveillance, or add daily history under More › Opening totals."));return;}
+  const W=324,H=196,L=30,R=12,T=12,B=50;const yBase=H-B;
+  const sc=niceScale(Math.max(4,...ser.flatMap(x=>x.pts.map(p=>p.v))),4);
+  const y=v=>T+(yBase-T)*(1-v/sc.top);
+  const cw=(W-L-R)/rows.length;const X=i=>L+cw*i+cw/2;
+  let s=`<svg class="epi" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Samples tested and NS1, IgM and IgG positives by date of report">`;
+  s+=yAxisSvg(sc,y,L,W,R,"Samples",(T+yBase)/2);
+  const r=n=>n>40?1.5:2.3;
+  ser.forEach(x=>{
+    if(x.pts.length>1)s+=`<path d="${x.pts.map((p,k)=>(k?"L":"M")+X(p.i).toFixed(1)+","+y(p.v).toFixed(1)).join(" ")}" fill="none" stroke="${x.c}" stroke-width="1.7" ${x.dash?'stroke-dasharray="4 2.5"':""} stroke-linejoin="round" stroke-linecap="round"/>`;
+    x.pts.forEach(p=>{s+=`<circle cx="${X(p.i).toFixed(1)}" cy="${y(p.v).toFixed(1)}" r="${r(x.pts.length)}" fill="#fff" stroke="${x.c}" stroke-width="1.3"/>`;});
+    const lp=x.pts[x.pts.length-1];s+=`<text x="${(X(lp.i)+(x.pts.length===1?0:0)).toFixed(1)}" y="${(y(lp.v)-4.5).toFixed(1)}" font-size="7.5" font-weight="700" text-anchor="middle" fill="${x.c}" ${FF}>${lp.v}</text>`;
+  });
+  s+=xAxisSvg(rows,L,cw,yBase,W,R);
+  // legend: 2 x 2
+  ser.forEach((x,k)=>{const lx=40+(k%2)*140,ly=H-22+Math.floor(k/2)*12;
+    s+=`<line x1="${lx}" x2="${lx+14}" y1="${ly-3}" y2="${ly-3}" stroke="${x.c}" stroke-width="1.7" ${x.dash?'stroke-dasharray="4 2.5"':""}/><circle cx="${lx+7}" cy="${ly-3}" r="2.2" fill="#fff" stroke="${x.c}" stroke-width="1.3"/><text x="${lx+18}" y="${ly}" font-size="8.5" fill="#44506a" ${FF}>${x.l}</text>`;});
+  s+=`</svg>`;
+  push(svgNode(s),{keep:1});
+  const sum=k=>{const z=ser.find(x=>x.k===k);return z?z.pts.reduce((t,p)=>t+p.v,0):null;};
+  const tested=sum("tested");
+  const parts=ser.filter(x=>x.k!=="tested").map(x=>{const v=sum(x.k);return x.l+" "+fmtN(v)+(tested?" ("+pct(v,tested)+")":"");});
+  push(h("div",{class:"note"},"Daily laboratory results by date of report, "+dLab(rows[0].d)+" – "+dLab(rows[rows.length-1].d)+": "+(tested!=null?fmtN(tested)+" samples tested"+(parts.length?"; ":""):"")+parts.join(", ")+(tested?". Percentages are of samples tested.":".")));
 }
 
 function buildAtoms(edit){
@@ -761,7 +872,8 @@ function buildAtoms(edit){
     if(sec.special==="teams")teamAtoms(edit,push);
     if(sec.special==="stock")stockAtoms(edit,push);
     if(sec.special==="actions")actionAtoms(edit,push);
-    if(sec.special==="epi")epiAtoms(push);
+    if(sec.special==="epi")epiAtoms(edit,push);
+    if(sec.special==="lab")labAtoms(edit,push);
     if(sec.special==="images")imagesAtoms(edit,push);
     if(sec.fields){
       let fl=sec.fields;
@@ -784,7 +896,11 @@ function buildAtoms(edit){
       const a=A[i];
       if(isHdr(a.el)){
         let j=i+1,has=false;
-        while(j<A.length&&!isHdr(A[j].el)){if(!isGap(A[j])&&A[j].el)has=true;j++;}
+        const isH1=el=>el&&el.classList&&el.classList.contains("h1");
+        const stop=a.el.classList.contains("h1")?(el=>isH1(el)):(el=>isHdr(el));
+        if(a.el.classList.contains("h1")){let k=i+1;while(k<A.length&&!isH1(A[k].el)){if(!isGap(A[k])&&A[k].el&&!isHdr(A[k].el))has=true;k++;}
+          if(has){out.push(a);i++;continue;} i=k;continue;}
+        while(j<A.length&&!stop(A[j].el)){if(!isGap(A[j])&&A[j].el)has=true;j++;}
         if(has){out.push(a);for(let k=i+1;k<j;k++)out.push(A[k]);}
         i=j;
       }else{out.push(a);i++;}
@@ -796,6 +912,71 @@ function buildAtoms(edit){
 
 /* ================= rendering: pages ================= */
 const H1=685,HN=662;
+/* ================= Situation at a glance ================= */
+const GLANCE_TOP=98;
+const WDAYS=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+function longDate(iso){const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(iso||"");if(!m)return "";const d=new Date(Date.UTC(+m[1],+m[2]-1,+m[3]));return WDAYS[d.getUTCDay()]+", "+(+m[3])+" "+MONTHS[+m[2]-1]+" "+m[1];}
+const plural=(n,one,many)=>fmtN(n)+" "+(n===1?one:(many||one+"s"));
+function sitrepsInWindow(fromExcl,toIncl){return allNums().map(sitrepFor).filter(s=>s&&s.end_date&&s.end_date>fromExcl&&s.end_date<=toIncl);}
+function locsOf(s){return String(((s||{}).v||{}).case_count_by_locality||"").split(/[,;\n]+/).map(x=>x.replace(/\(.*?\)/g,"").replace(/[:=\-–]?\s*\d+\s*$/,"").trim().toLowerCase()).filter(Boolean);}
+function autoGlance(){
+  const v=cur.v||{},E=cur.end_date||todayISO();
+  const iso=t=>new Date(t).toISOString().slice(0,10),Et=Date.parse(E+"T00:00:00Z");
+  const out=[];
+  const tot=cumCases(),conf=cum("new_confirmed_cases"),dth=cum("dengue_deaths");
+  out.push("As of "+(longDate(E)||"the latest report")+", "+plural(tot,"dengue case")+" ("+fmtN(conf)+" laboratory-confirmed) and "+plural(dth,"dengue-associated death")+" (CFR "+(tot?(dth/tot*100).toFixed(1):"0.0")+"%) have been reported in Malampa Province.");
+  const nc=newCases(cur);
+  if(nc!==""){const oneDay=!cur.start_date||cur.start_date>=E;
+    out.push(plural(nc,"new case")+" "+(nc===1?"was":"were")+" reported "+(oneDay?"on the latest day":"in this reporting period ("+shortDate(cur.start_date)+" – "+shortDate(E)+")")+".");}
+  // 7-day figures from the daily series (SitReps + daily history)
+  const rows=dailySeries();
+  if(rows.length){
+    const a=iso(Et-7*DAY),b=iso(Et-14*DAY);
+    const w1=rows.filter(r=>r.d>a&&r.d<=E).reduce((x,r)=>x+r.cases,0);
+    const w0=rows.filter(r=>r.d>b&&r.d<=a).reduce((x,r)=>x+r.cases,0);
+    const covered=rows[0].d<=iso(Et-13*DAY);
+    let t="In the past 7 days "+plural(w1,"case")+" "+(w1===1?"was":"were")+" reported";
+    if(covered&&w0>0){const ch=(w1-w0)/w0*100;t+=" — "+(Math.abs(ch)<0.5?"no change on":(ch>0?"an increase of ":"a decrease of ")+Math.abs(ch).toFixed(0)+"% on")+" the previous 7 days";}
+    t+=" (7-day incidence "+(w1/POP_TOTAL*1e5).toFixed(1)+" per 100 000).";out.push(t);
+  }
+  // hospital
+  const adm=v.current_dengue_admissions,beds=v.dengue_beds_available;
+  const sev7=sitrepsInWindow(iso(Et-7*DAY),E).reduce((x,s)=>x+num((s.v||{}).severe_dengue_cases),0);
+  const anySev=sitrepsInWindow(iso(Et-7*DAY),E).some(s=>has((s.v||{}).severe_dengue_cases));
+  if(has(adm)){let t=num(adm)?plural(num(adm),"patient")+" "+(num(adm)===1?"is":"are")+" admitted with dengue":"No patients are currently admitted with dengue";
+    if(has(beds)&&num(beds)>0)t+=" ("+fmtN(num(adm))+" of "+fmtN(num(beds))+" beds occupied)";
+    if(anySev)t+="; "+plural(sev7,"severe case")+" in 7 days";out.push(t+".");}
+  else if(anySev)out.push(plural(sev7,"severe dengue case")+" in the past 7 days.");
+  // villages
+  const hasPrev=allNums().some(n=>n<cur.num&&sitrepFor(n));
+  const prevL=new Set(),allL=new Set();
+  allNums().forEach(n=>{const s=sitrepFor(n);if(!s||n>cur.num)return;locsOf(s).forEach(x=>{allL.add(x);if(n<cur.num)prevL.add(x);});});
+  if(allL.size){const nw=locsOf(cur).filter(x=>!prevL.has(x));const nwU=[...new Set(nw)].length;
+    out.push(fmtN(allL.size)+" "+(allL.size===1?"village has":"villages have")+" reported cases"+(hasPrev?", "+fmtN(nwU)+" newly affected":"")+".");}
+  // area councils + teams
+  const acA=acAffected().length,acN=acNewlyAffected().length;
+  const teamRep=TEAMS.filter(t=>{const st=((cur.teams||{})[t[0]]||{}).status;return st&&st!=="Not reported";}).length;
+  const anyTeam=TEAMS.some(t=>((cur.teams||{})[t[0]]||{}).status);
+  let ac=acA+" of 10 area councils affected"+(hasPrev&&acN?" ("+acN+" newly affected)":"");
+  if(anyTeam)ac+="; "+teamRep+" of "+TEAMS.length+" functional teams reported";
+  out.push(ac.charAt(0).toUpperCase()+ac.slice(1)+".");
+  // actions
+  const acts=(cur.actions||[]).filter(x=>x.status!=="Completed"&&x.status!=="Cancelled");
+  const od=acts.filter(x=>x.status==="Overdue"||(x.action_deadline&&x.action_deadline<E)).length;
+  out.push(acts.length?plural(acts.length,"EOC action")+" outstanding"+(od?" ("+od+" overdue)":"")+".":"No EOC actions outstanding.");
+  return out.join(" ");
+}
+function buildGlance(edit){
+  const own=has(cur.v.situation_glance)&&String(cur.v.situation_glance).trim()!=="";
+  const txt=own?cur.v.situation_glance:autoGlance();
+  return h("section",{class:"glance",style:"top:"+GLANCE_TOP+"px"},
+    h("div",{class:"gh"},h("span",null,"Situation at a glance"),
+      edit?h("span",{class:"gtag"},own?"edited":"auto"):null,
+      edit&&own?h("button",{type:"button",class:"eb","data-act":"regenGlance",title:"Discard your edits and regenerate from the SitRep data"},"↺ Regenerate"):null),
+    edit?h("div",{class:"tx gt","data-bind":"v.situation_glance","data-glance":own?null:"1",contenteditable:"true",role:"textbox","aria-label":"Situation at a glance","data-ph":"Situation at a glance",text:txt})
+        :h("p",{class:"gt",text:txt}));
+}
+
 function makePage(idx){
   const p=h("div",{class:"page"});
   const waveSvg='<svg class="wave" viewBox="0 0 1056 60" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" aria-hidden="true"><path fill="rgba(10,22,46,0.14)" d="M0,5 H470 C545,5 590,16 625,32 C670,52 720,58 780,58 C830,58 880,52 930,42 V64 H0 Z"/><path fill="#ffffff" d="M0,0 H460 C540,0 585,10 620,26 C665,48 715,56 780,56 C830,56 880,48 940,36 V0 H0 Z"/></svg>';
@@ -811,10 +992,13 @@ function makePage(idx){
   if(idx>0)p.appendChild(h("div",{class:"ftr"},h("div",{class:"pn"},String(idx+1)),h("div",{class:"ob"},h("b",null,"EOC Objective: "),"1. Overall management of EOC operations, 2. Establish preparedness and response plan, 3. Organise regular meetings, 4. Maintain records of EOC documents, 5. Produce daily SitRep & submit to the Malampa Provincial Health Office (PHEOC Incident Commander) for approval and dissemination")));
   return {el:p,cols,H:idx?HN:H1};
 }
-function paginate(atoms,host){
+function paginate(atoms,host,glance){
   host.innerHTML="";
   const pages=[];let pg,ci=0;
-  const newPage=()=>{pg=makePage(pages.length);pages.push(pg);host.appendChild(pg.el);ci=0;};
+  const newPage=()=>{pg=makePage(pages.length);pages.push(pg);host.appendChild(pg.el);ci=0;
+    if(pages.length===1&&glance){pg.el.appendChild(glance);const gh=Math.ceil(glance.offsetHeight)+10;
+      pg.el.querySelector(".body").style.top=(GLANCE_TOP+gh)+"px";pg.H=H1-(GLANCE_TOP+gh-102);
+      pg.cols.forEach(c=>{c.parentNode.style.height=pg.H+"px";});}};
   const col=()=>pg.cols[ci];
   const next=()=>{if(ci<2)ci++;else newPage();};
   newPage();
@@ -842,7 +1026,7 @@ function render(){
   const ae=document.activeElement;let fkey=null,caret=null;
   if(ae&&host.contains(ae)&&ae.dataset&&ae.dataset.bind){fkey=ae.dataset.bind;caret=getCaret(ae);}
   const sy=window.scrollY;
-  paginate(buildAtoms(true),host);
+  {const at=buildAtoms(true);paginate(at,host,buildGlance(true));}
   fit();
   window.scrollTo(0,sy);
   if(fkey){const el=host.querySelector('[data-bind="'+CSS.escape(fkey)+'"]');if(el){el.focus({preventScroll:true});setCaret(el,caret);}}
@@ -854,6 +1038,8 @@ function fit(){const st=$("#stage"),sc=$("#scaler");const avail=st.clientWidth-3
 window.addEventListener("resize",()=>{clearTimeout(fit._t);fit._t=setTimeout(fit,120);});
 
 function updateCalcs(){
+  const g=document.querySelector("#pages [data-glance]");
+  if(g&&!has(cur.v.situation_glance)&&document.activeElement!==g)g.textContent=autoGlance();
   document.querySelectorAll("#pages [data-calc]").forEach(el=>{
     const c=el.dataset.calc;
     if(c.startsWith("cum:"))el.textContent=fmtN(cum(c.slice(4)));
@@ -991,6 +1177,7 @@ function onRemote(){
 const pagesEl=$("#pages");
 pagesEl.addEventListener("input",e=>{
   const el=e.target;const key=el.dataset&&el.dataset.bind;if(!key)return;
+  if(el.type==="checkbox")return;
   if(key.startsWith("img:")){const id=key.slice(4);if(store.images[id]){store.images[id].caption=el.innerText.trim();clearTimeout(el._t);el._t=setTimeout(()=>backend.saveImage(id,store.images[id]).catch(err=>notice("Caption not saved: "+(err.message||err.code))),800);}return;}
   let v;
   if(el.isContentEditable)v=el.innerText.replace(/\n$/,"");
@@ -1000,7 +1187,7 @@ pagesEl.addEventListener("input",e=>{
   updateCalcs();
   markDirty();
 });
-pagesEl.addEventListener("change",e=>{const el=e.target;if(el.tagName==="SELECT"&&el.dataset.bind){setPath(el.dataset.bind,el.value);markDirty();queueRender();}});
+pagesEl.addEventListener("change",e=>{const el=e.target;if(el.type==="checkbox"&&el.dataset.bind){setPath(el.dataset.bind,el.checked);markDirty();queueRender();return;}if(el.tagName==="SELECT"&&el.dataset.bind){setPath(el.dataset.bind,el.value);markDirty();queueRender();}});
 pagesEl.addEventListener("focusout",()=>{setTimeout(()=>{if(pendingRemote||layoutDirty){pendingRemote=false;layoutDirty=false;queueRender();}},0);});
 pagesEl.addEventListener("paste",e=>{const el=e.target.closest&&e.target.closest("[contenteditable]");if(!el)return;e.preventDefault();const t=(e.clipboardData||window.clipboardData).getData("text/plain");document.execCommand("insertText",false,t);});
 pagesEl.addEventListener("keydown",e=>{const el=e.target;if(el.isContentEditable&&el.tagName==="SPAN"&&e.key==="Enter"){e.preventDefault();el.blur();}});
@@ -1010,6 +1197,7 @@ pagesEl.addEventListener("click",e=>{
   const g=e.target.closest("[data-goto]");if(g&&!e.target.closest("input,select,[contenteditable]")){gotoAnchor(g.dataset.goto);return;}
   const b=e.target.closest("[data-act]");if(!b)return;
   const act=b.dataset.act,i=+b.dataset.i;
+  if(act==="regenGlance"){cur.v.situation_glance="";markDirty();render();return;}
   if(act==="addStock"){cur.stock.push({item:"",unit:"",soh:"",adc:"",min:"",reorder:""});markDirty();render();}
   if(act==="delStock"){cur.stock.splice(i,1);markDirty();render();}
   if(act==="addAction"){cur.actions.push({action_id:nextActionId(),action_date:todayISO(),action_priority:"",status:"Open",completion_pct:0});markDirty();render();}
@@ -1043,9 +1231,9 @@ $("#btnDelete").addEventListener("click",async e=>{
   try{if(store.sitreps[srId(n)])await backend.deleteSitrep(n);clearDraft(n);const nums=allNums().filter(x=>x!==n);cur=null;openSitrep(nums.length?nums[nums.length-1]:1);notice("SitRep "+pad2(n)+" deleted.");}
   catch(err){notice("Could not delete: "+(err.message||err.code));}
 });
-$("#btnBaseline").addEventListener("click",()=>{pop.hidden=true;const g=$("#bgrid");g.innerHTML="";const b=store.config.baseline||{};CUMDEF.forEach(f=>g.appendChild(h("label",null,f.l,h("input",{type:"number",min:"0",id:"bl-"+f.k,value:has(b[f.k])?b[f.k]:0}))));$("#baselinePanel").hidden=false;});
+$("#btnBaseline").addEventListener("click",()=>{pop.hidden=true;const g=$("#bgrid");g.innerHTML="";const b=store.config.baseline||{};CUMDEF.forEach(f=>g.appendChild(h("label",null,f.l,h("input",{type:"number",min:"0",id:"bl-"+f.k,value:has(b[f.k])?b[f.k]:0}))));$("#bHist").value=store.config.history_text||"";$("#baselinePanel").hidden=false;});
 $("#bClose").addEventListener("click",()=>{$("#baselinePanel").hidden=true;});
-$("#bSave").addEventListener("click",async()=>{const b={};CUMDEF.forEach(f=>{const v=$("#bl-"+f.k).value;b[f.k]=v===""?0:Math.max(0,Number(v));});try{await backend.saveConfig(Object.assign({},store.config,{baseline:b}));$("#baselinePanel").hidden=true;render();notice("Opening totals saved. Cumulative figures updated.");}catch(err){notice("Could not save opening totals: "+(err.message||err.code));}});
+$("#bSave").addEventListener("click",async()=>{const b={};CUMDEF.forEach(f=>{const v=$("#bl-"+f.k).value;b[f.k]=v===""?0:Math.max(0,Number(v));});try{await backend.saveConfig(Object.assign({},store.config,{baseline:b,history_text:$("#bHist").value}));$("#baselinePanel").hidden=true;render();notice("Opening totals saved. Cumulative figures updated.");}catch(err){notice("Could not save opening totals: "+(err.message||err.code));}});
 
 // backup / restore
 $("#btnBackup").addEventListener("click",async()=>{pop.hidden=true;const data=JSON.stringify({app:"malampa-pheoc-sitrep",exported:new Date().toISOString(),sitreps:store.sitreps,images:store.images,config:store.config},null,1);await offerFile("Malampa_Dengue_SitRep_backup_"+todayISO()+".json",new Blob([data],{type:"application/json"}));});
@@ -1078,7 +1266,7 @@ $("#btnPdf").addEventListener("click",async()=>{
   try{
     if(document.fonts&&document.fonts.ready)await document.fonts.ready;
     const host=$("#exportHost");
-    const pages=paginate(buildAtoms(false),host);
+    const atx=buildAtoms(false);const pages=paginate(atx,host,buildGlance(false));
     await Promise.all([...host.querySelectorAll("img")].map(i=>i.decode?i.decode().catch(()=>{}):null));
     const pdf=new window.jspdf.jsPDF({orientation:"landscape",unit:"pt",format:"letter",compress:true});
     for(let i=0;i<pages.length;i++){
@@ -1146,7 +1334,7 @@ function setPreview(on){
     if(btn){btn.textContent="Exit Preview";btn.classList.add("preview-on");}
     // Re-render in non-edit mode
     const host=pages;const sy=window.scrollY;
-    paginate(buildAtoms(false),host);
+    {const atp=buildAtoms(false);paginate(atp,host,buildGlance(false));}
     fit();window.scrollTo(0,sy);
   }else{
     pages.classList.add("editing");
